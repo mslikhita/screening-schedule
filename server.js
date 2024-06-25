@@ -1,7 +1,7 @@
-
 const express = require('express');
 const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
+const cors = require('cors'); // Import CORS package
 
 const app = express();
 const PORT = 3000;
@@ -18,6 +18,7 @@ const pool = mysql.createPool({
 
 // Middleware
 app.use(bodyParser.json());
+app.use(cors()); // Use CORS middleware
 
 // Route to fetch all requested candidates with candidate and interviewer details
 app.get('/requested_candidates', async (req, res) => {
@@ -40,10 +41,10 @@ app.get('/requested_candidates', async (req, res) => {
     }
 });
 
-// Route to update requested candidate details including requester_name (interviewer name)
+// Route to update requested candidate details
 app.put('/requested_candidates/:id', async (req, res) => {
     const requestedCandidateId = req.params.id;
-    const { type_of_interview, mode_of_interview, stage_of_interview, scheduled_interview_timing, requester_name } = req.body;
+    const { type_of_interview, mode_of_interview, stage_of_interview, scheduled_interview_timing } = req.body;
 
     try {
         // Check if compulsory fields are provided
@@ -51,26 +52,12 @@ app.put('/requested_candidates/:id', async (req, res) => {
             return res.status(400).json({ error: 'Mandatory fields (type_of_interview, mode_of_interview, stage_of_interview, scheduled_interview_timing) are required.' });
         }
 
-        let sql;
-        const values = [];
-
-        // Construct SQL update query for compulsory fields
-        sql = `
+        const sql = `
             UPDATE requested_candidate
             SET type_of_interview = ?, mode_of_interview = ?, stage_of_interview = ?, scheduled_interview_timing = ?
             WHERE requested_candidate_id = ?
         `;
-        values.push(type_of_interview, mode_of_interview, stage_of_interview, scheduled_interview_timing, requestedCandidateId);
-
-        // If requester_name is provided, include it in the update
-        if (requester_name) {
-            sql = `
-                UPDATE requested_candidate
-                SET type_of_interview = ?, mode_of_interview = ?, stage_of_interview = ?, scheduled_interview_timing = ?, requester_name = ?
-                WHERE requested_candidate_id = ?
-            `;
-            values.unshift(requester_name); // Add requester_name to the beginning of values array
-        }
+        const values = [type_of_interview, mode_of_interview, stage_of_interview, scheduled_interview_timing, requestedCandidateId];
 
         const [result] = await pool.query(sql, values);
         console.log('Updated:', result);
